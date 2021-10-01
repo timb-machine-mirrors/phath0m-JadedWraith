@@ -6,7 +6,7 @@ CFLAGS = -c -std=gnu99 -fno-stack-protector -fPIE -fno-stack-check -fvisibility=
 LD_FLAGS = -fvisibility=hidden -ldl -lpthread -lrt
 UNAME_P := $(shell uname -m)
 UNAME_S := $(shell uname -s)
-VERSION := 2.0.0
+VERSION := 2.1.0
 
 NAME = JadedWraith-$(VERSION)-$(UNAME_S)-$(UNAME_P).elf
 JADEDWRAITH = bin/$(NAME)

